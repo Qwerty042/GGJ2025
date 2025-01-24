@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -8,49 +9,83 @@ using UnityEngine.UIElements;
 public class TileManager : MonoBehaviour
 {
     public GameObject tilePrefab;
-    private float timer;
-    private int index = 0;
-    private GameObject[] tiles = new GameObject[7]; 
-    Vector3 spawnPos = new Vector3(-8f, 0f);
-    private GameObject firstClicked;
+    public GameObject tileSelectBoarderPrefab;
+    public Vector3[] tileSpots;// = new Vector3[7];
 
-    int cubeCount = 0;
+    // private enum GameStateEnum
+    // {
+    //     gsSELECTING,
+    //     gsSWAPPING
+    // }
 
-    // Start is called before the first frame update
+    private GameObject[] tiles;
+    private GameObject[] tileSelectBoarders = new GameObject[2] {null, null};
+    private GameObject[] swapTiles = new GameObject[2] {null, null};
+    private bool swapping = false;
+    private int NUM_TILES;
+    // private const int NUM_PERMUTATIONS = 5018;
+
+    void Awake()
+    {
+        NUM_TILES = tileSpots.Length;
+
+        tiles = new GameObject[NUM_TILES];
+        for (int i = 0; i < NUM_TILES; i++)
+        {
+            tiles[i] = Instantiate(tilePrefab, tileSpots[i], Quaternion.identity);
+        }
+    }
+
     void Start()
     {
         Debug.Log("Hello World!");
     }
 
-    // Update is called once per frame
     void Update()
     {
-        timer += Time.deltaTime;
 
-        if(timer >= 0.1f && cubeCount < 7)
+
+        if(Input.GetMouseButtonDown(1)) // Right click anywhere will clear selection
         {
-            spawnPos.x += 2;
-            tiles[cubeCount] = Instantiate(tilePrefab, spawnPos, Quaternion.identity);
-            cubeCount++;
-            timer = 0;
+            ClearTileSelection();
         }
-
-        if(cubeCount >= 7)
-        {
-            tiles[index].transform.position += new Vector3(0,10f * Time.deltaTime,0);
-        }
-
-        if(Input.GetMouseButtonDown(0))
+        if(Input.GetMouseButtonDown(0)) // Left click
         {
             Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
-            if(hit.transform != null)
+            if(hit.transform == null) // Didn't click anything
             {
-                Debug.Log(hit.transform.name);
-                hit.transform.gameObject.transform.position += Vector3.up;
+                ClearTileSelection();
+            }
+            else if(hit.transform.name.StartsWith(tilePrefab.name))
+            {
+                if(swapTiles[0] == null) // No other tile selected
+                {
+                    swapTiles[0] = hit.transform.gameObject;
+                    //TODO: Instantiate selection boarder
+                    Debug.LogFormat("Selected Tile! Name:{0} ID:{1}", swapTiles[0].name, swapTiles[0].GetInstanceID().ToString());
+                }
+                else if (swapTiles[0].GetInstanceID() == hit.transform.gameObject.GetInstanceID()) // Tile is already selected, deselect:
+                {
+                    ClearTileSelection();
+                }
+                else
+                {
+                    swapTiles[1] = hit.transform.gameObject;
+                    Debug.LogFormat("Swap Name_0:{0},ID_0:{1} with Name_1:{2},ID_1:{3}", swapTiles[0].name, 
+                                                                                         swapTiles[0].GetInstanceID().ToString(),
+                                                                                         swapTiles[1].name,
+                                                                                         swapTiles[1].GetInstanceID().ToString());
+                    swapping = true;
+                }
             }
         }
     }
 
-
+    void ClearTileSelection()
+    {
+        Debug.Log("Clear selected");
+        swapTiles = new GameObject[2] {null, null};
+        //TODO: clear selection boarders
+    }
 }
