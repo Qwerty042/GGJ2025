@@ -12,6 +12,7 @@ public class TileManager : MonoBehaviour
     private int index = 0;
     private GameObject[] tiles = new GameObject[7]; 
     Vector3 spawnPos = new Vector3(-8f, 0f);
+    private GameObject firstClicked;
 
     int cubeCount = 0;
 
@@ -32,12 +33,24 @@ public class TileManager : MonoBehaviour
             tiles[cubeCount] = Instantiate(tilePrefab, spawnPos, Quaternion.identity);
             cubeCount++;
             timer = 0;
-            Debug.Log(tiles);
         }
 
         if(cubeCount >= 7)
         {
             tiles[index].transform.position += new Vector3(0,10f * Time.deltaTime,0);
         }
+
+        if(Input.GetMouseButtonDown(0))
+        {
+            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+            if(hit.transform != null)
+            {
+                Debug.Log(hit.transform.name);
+                hit.transform.gameObject.transform.position += Vector3.up;
+            }
+        }
     }
+
+
 }
