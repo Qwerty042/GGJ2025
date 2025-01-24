@@ -276,6 +276,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tilePrefab: {fileID: 3446365212598504960, guid: b8c87c022a86f8a43ae9bc5d9b39b282, type: 3}
+  tileSelectBoarderPrefab: {fileID: 1763231876909891731, guid: 65daa11c267c4d44db449a70402a283b, type: 3}
   tileSpots:
   - {x: -6, y: 0, z: 0}
   - {x: -4, y: 0, z: 0}

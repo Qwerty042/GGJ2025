@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Tilemaps;
 using UnityEngine.UIElements;
 
 public class TileManager : MonoBehaviour
@@ -12,17 +13,22 @@ public class TileManager : MonoBehaviour
     public GameObject tileSelectBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
 
-    // private enum GameStateEnum
-    // {
-    //     gsSELECTING,
-    //     gsSWAPPING
-    // }
+    private enum GameState
+    {
+        gsSELECTING,
+        gsSWAPPING
+    }
+
+    private GameState gameState = GameState.gsSELECTING;
 
     private GameObject[] tiles;
     private GameObject[] tileSelectBoarders = new GameObject[2] {null, null};
     private GameObject[] swapTiles = new GameObject[2] {null, null};
-    private bool swapping = false;
+    private Vector3[] tileDestinations = new Vector3[2];
+    private bool doSwap = false;
     private int NUM_TILES;
+    
+    private const float SWAP_MOVE_SPEED = 0.01f;
     // private const int NUM_PERMUTATIONS = 5018;
 
     void Awake()
@@ -43,8 +49,32 @@ public class TileManager : MonoBehaviour
 
     void Update()
     {
+        switch (gameState)
+        {
+            case GameState.gsSELECTING:
+                CheckSwapping();
+                if(doSwap)
+                {
+                    tileDestinations[0] = swapTiles[1].transform.position;
+                    tileDestinations[1] = swapTiles[0].transform.position;
+                    swapTiles[0].transform.position += Vector3.up;
+                    swapTiles[1].transform.position += Vector3.down;
+                    gameState = GameState.gsSWAPPING;
+                }
+                break;
+            case GameState.gsSWAPPING:
+                Swap();
+                if (!doSwap)
+                {
+                    ClearTileSelection();
+                    gameState = GameState.gsSELECTING;
+                }
+                break;
+        }
+    }
 
-
+    void CheckSwapping()
+    {
         if(Input.GetMouseButtonDown(1)) // Right click anywhere will clear selection
         {
             ClearTileSelection();
@@ -62,7 +92,7 @@ public class TileManager : MonoBehaviour
                 if(swapTiles[0] == null) // No other tile selected
                 {
                     swapTiles[0] = hit.transform.gameObject;
-                    //TODO: Instantiate selection boarder
+                    tileSelectBoarders[0] = Instantiate(tileSelectBoarderPrefab, swapTiles[0].transform.position, Quaternion.identity);
                     Debug.LogFormat("Selected Tile! Name:{0} ID:{1}", swapTiles[0].name, swapTiles[0].GetInstanceID().ToString());
                 }
                 else if (swapTiles[0].GetInstanceID() == hit.transform.gameObject.GetInstanceID()) // Tile is already selected, deselect:
@@ -72,11 +102,12 @@ public class TileManager : MonoBehaviour
                 else
                 {
                     swapTiles[1] = hit.transform.gameObject;
+                    tileSelectBoarders[1] = Instantiate(tileSelectBoarderPrefab, swapTiles[1].transform.position, Quaternion.identity);
                     Debug.LogFormat("Swap Name_0:{0},ID_0:{1} with Name_1:{2},ID_1:{3}", swapTiles[0].name, 
                                                                                          swapTiles[0].GetInstanceID().ToString(),
                                                                                          swapTiles[1].name,
                                                                                          swapTiles[1].GetInstanceID().ToString());
-                    swapping = true;
+                    doSwap = true;
                 }
             }
         }
@@ -86,6 +117,20 @@ public class TileManager : MonoBehaviour
     {
         Debug.Log("Clear selected");
         swapTiles = new GameObject[2] {null, null};
-        //TODO: clear selection boarders
+        Destroy(tileSelectBoarders[0]);
+        Destroy(tileSelectBoarders[1]);
+    }
+
+    void Swap()
+    {
+        swapTiles[0].transform.position = Vector3.MoveTowards(swapTiles[0].transform.position, tileDestinations[0], SWAP_MOVE_SPEED);
+        swapTiles[1].transform.position = Vector3.MoveTowards(swapTiles[1].transform.position, tileDestinations[1], SWAP_MOVE_SPEED);
+
+        if((swapTiles[0].transform.position == tileDestinations[0]) &&
+           (swapTiles[1].transform.position == tileDestinations[1]))
+        {
+            Debug.Log("Done swap animation");
+            doSwap = false;
+        }
     }
 }
