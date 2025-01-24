@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -19,6 +20,13 @@ public class TileManager : MonoBehaviour
         gsSWAPPING
     }
 
+    // private struct Tile
+    // {
+    //     GameObject tileObject;
+    //     int goalIndex;
+    //     int currentIndex;
+    // }
+
     private GameState gameState = GameState.gsSELECTING;
 
     private GameObject[] tiles;
@@ -27,8 +35,9 @@ public class TileManager : MonoBehaviour
     private Vector3[] tileDestinations = new Vector3[2];
     private bool doSwap = false;
     private int NUM_TILES;
-    
-    private const float SWAP_MOVE_SPEED = 0.01f;
+    private const float SWAP_MOVE_TIME = 0.25f;
+    private const float SWAP_AMPLITUDE = 2f;
+    private float swapTimer = 0f;
     // private const int NUM_PERMUTATIONS = 5018;
 
     void Awake()
@@ -57,8 +66,6 @@ public class TileManager : MonoBehaviour
                 {
                     tileDestinations[0] = swapTiles[1].transform.position;
                     tileDestinations[1] = swapTiles[0].transform.position;
-                    swapTiles[0].transform.position += Vector3.up;
-                    swapTiles[1].transform.position += Vector3.down;
                     gameState = GameState.gsSWAPPING;
                 }
                 break;
@@ -85,7 +92,7 @@ public class TileManager : MonoBehaviour
             RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
             if(hit.transform == null) // Didn't click anything
             {
-                ClearTileSelection();
+                // ClearTileSelection(); Decide if to keep this or not based on play testing
             }
             else if(hit.transform.name.StartsWith(tilePrefab.name))
             {
@@ -123,14 +130,34 @@ public class TileManager : MonoBehaviour
 
     void Swap()
     {
-        swapTiles[0].transform.position = Vector3.MoveTowards(swapTiles[0].transform.position, tileDestinations[0], SWAP_MOVE_SPEED);
-        swapTiles[1].transform.position = Vector3.MoveTowards(swapTiles[1].transform.position, tileDestinations[1], SWAP_MOVE_SPEED);
+        swapTimer += Time.deltaTime;
 
-        if((swapTiles[0].transform.position == tileDestinations[0]) &&
-           (swapTiles[1].transform.position == tileDestinations[1]))
+        float animationProgress = swapTimer/SWAP_MOVE_TIME;
+
+        SwapMoveStepSine(animationProgress, 0);
+        SwapMoveStepSine(animationProgress, 1);
+
+        if(animationProgress > 1f)
         {
             Debug.Log("Done swap animation");
+            swapTimer = 0;
             doSwap = false;
         }
+    }
+
+    void SwapMoveStepSine(float progressFraction, int tileIndex)
+    {
+        Vector3 nextPos = swapTiles[tileIndex].transform.position;
+        float startX = tileSelectBoarders[tileIndex].transform.position.x;
+        float xDist = startX - tileDestinations[tileIndex].x;
+        float direction = tileIndex == 0 ? (1f) : (-1f);
+
+        nextPos.x = Mathf.Lerp(startX, tileDestinations[tileIndex].x, progressFraction);
+        nextPos.y = direction * SWAP_AMPLITUDE * Mathf.Sin(((startX * Mathf.PI)/(xDist))-((nextPos.x * Mathf.PI)/(xDist)));
+        if(tileIndex == 0)
+        {
+            Debug.LogFormat("X:{0},Y:{1}", nextPos.x, nextPos.y);
+        }
+        swapTiles[tileIndex].transform.position = nextPos;
     }
 }
