@@ -357,6 +357,7 @@ MonoBehaviour:
   spriteRenderer: {fileID: 164790668}
   audio: {fileID: 1110486570}
   hoverColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+  gameMode: 0
 --- !u!61 &164790672
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -481,7 +482,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 144.4, y: -180}
+  m_AnchoredPosition: {x: 147.32, y: -180}
   m_SizeDelta: {x: 250, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &537968369
@@ -504,7 +505,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SPEED MODE
+  m_text: TIME TRIAL
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2a017f65790d3d34b96dbc639103283d, type: 2}
   m_sharedMaterial: {fileID: 7156512326931922645, guid: 2a017f65790d3d34b96dbc639103283d, type: 2}
@@ -1133,6 +1134,7 @@ MonoBehaviour:
   spriteRenderer: {fileID: 1652632796}
   audio: {fileID: 1110486570}
   hoverColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+  gameMode: 1
 --- !u!61 &1652632799
 BoxCollider2D:
   m_ObjectHideFlags: 0

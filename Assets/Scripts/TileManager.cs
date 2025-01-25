@@ -12,12 +12,15 @@ using UnityEngine.Tilemaps;
 public static class GameManager
 {
     public static int Score;
-
+    public static float timeScore;
+    
     public enum GameMode
     {
         gmSKILL,
-        gmSPEED
+        gmSPEED,
+        gmALL
     }
+    public static GameMode gameMode;
 }
 
 public class TileManager : MonoBehaviour
@@ -39,6 +42,7 @@ public class TileManager : MonoBehaviour
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI roundText;
     public TextMeshProUGUI hintText;
+    public TextMeshProUGUI timerText;
     public GameObject textPrefab;
     public Canvas parentCanvas;
 
@@ -68,7 +72,7 @@ public class TileManager : MonoBehaviour
         public string right_title;
     }
 
-    private GameState gameState = GameState.gsLOAD_LEVEL;
+    private GameState gameState = GameState.gsPRE_START;
     public const int TOTAL_LEVELS = 47;
     public const int LEVELS_IN_A_RUN = 8;
     private int nextLevel;
@@ -92,13 +96,25 @@ public class TileManager : MonoBehaviour
     private OrderPermutation currentPermutation;
     private int swapCount;
     private int numSorted = 1;
+    private bool isFinished = false;
     private float hintTimer = 0f;
     private float hintShowTime = 2f;
+    private GameManager.GameMode gameMode;
+    private float timeTrialStartTime = -1f;
 
     void Start()
     {
         GameManager.Score = 0;
-
+        gameMode = GameManager.gameMode;
+        if(gameMode == GameManager.GameMode.gmSPEED)
+        {
+            scoreText.alpha = 0;
+            swapCountText.alpha = 0;
+        }
+        else if (gameMode == GameManager.GameMode.gmSKILL)
+        {
+            timerText.alpha = 0;
+        }
         LoadPermutations();
         LoadLevelMetadata();
     }
@@ -107,13 +123,18 @@ public class TileManager : MonoBehaviour
     {
         switch (gameState)
         {
+            case GameState.gsPRE_START:
+                // TODO: Have a countdown sequence here if they are in time trial mode
+                timeTrialStartTime = Time.timeSinceLevelLoad;
+                gameState = GameState.gsLOAD_LEVEL;
+                break;
             case GameState.gsLOAD_LEVEL:
                 nextLevel = rnd.Next(TOTAL_LEVELS);
                 while (doneLevelList.Contains(nextLevel))
                 {
                     nextLevel = rnd.Next(TOTAL_LEVELS);
                 }
-                Debug.Log($"Loading level {nextLevel}...");
+                // Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);
                 doneLevelList.Add(nextLevel);
                 gameState = GameState.gsSELECTING;
@@ -131,6 +152,7 @@ public class TileManager : MonoBehaviour
                 }
                 if(Input.GetKeyDown(KeyCode.H) && swapCount > currentPermutation.bubbleSwaps)
                 {
+                    ClearTileSelection();
                     for(int i = 0; i < tiles.Length; i++)
                     {
                         TileProperties tileProperties = tiles[i].GetComponent<TileProperties>();
@@ -143,13 +165,16 @@ public class TileManager : MonoBehaviour
                     }
                     hintTimer = 0f;
                     GameManager.Score -= 500;
-                    SpawnText("-500", new Vector3(280, -130, 0), Color.red, 20f);
+                    SpawnText("-500", new Vector3(280, -130, 0), Color.red, 20f, GameManager.GameMode.gmSKILL);
+                    timeTrialStartTime -= 10f;
+                    SpawnText("+10s", new Vector3(0, 80, 0), Color.red, 42f, GameManager.GameMode.gmSPEED);
                     scoreText.text = $"Score: {GameManager.Score}";
                     gameState = GameState.gsHINT;
                 }
                 break;
             case GameState.gsHINT:
                 hintTimer += Time.deltaTime;
+                CheckSwapping(); // Safe to call here since we cleared the tile selection before coming into this state, so not possible for the user to actually swap any, just possible to select one before we go to the next state
                 if(hintTimer >= hintShowTime)
                 {
                     for(int i = 0; i < tileValidityBoarders.Length; i++)
@@ -173,26 +198,37 @@ public class TileManager : MonoBehaviour
                     if (swapCount == currentPermutation.minSwaps)
                     {
                         // PERFECT!
-                        SpawnText("PERFECT!", new Vector3(0, 0, 0), Color.white, 60f);
-                        SpawnText("+1000", new Vector3(280, -130, 0), Color.white, 20f);
+                        SpawnText("PERFECT!", new Vector3(0, 0, 0), Color.white, 60f, GameManager.GameMode.gmALL);
+                        SpawnText("+1000", new Vector3(280, -130, 0), Color.white, 20f, GameManager.GameMode.gmSKILL);
                         sfxVictory.Play();
                         GameManager.Score += 1000;
                     }
                     else if (swapCount > currentPermutation.bubbleSwaps)
                     {
                         // FAILURE!
-                        SpawnText("BUBBLE SORT WAS BETTER!", new Vector3(0, 0, 0), Color.red, 50f);
-                        sfxDefeat.Play();
+                        SpawnText("BUBBLE SORT WAS BETTER!", new Vector3(0, 0, 0), Color.red, 50f, GameManager.GameMode.gmSKILL);
+                        if(gameMode == GameManager.GameMode.gmSKILL)
+                            sfxDefeat.Play();
+                        else
+                            sfxVictory.Play();
                     }
                     else
                     {
                         sfxVictory.Play();
-                        SpawnText("NICE!", new Vector3(0, 0, 0), Color.white, 60f);
+                        SpawnText("NICE!", new Vector3(0, 0, 0), Color.white, 60f, GameManager.GameMode.gmALL);
                         int scoreMod = 1000 - (1000 * (swapCount - currentPermutation.minSwaps) / (currentPermutation.bubbleSwaps + 1 - currentPermutation.minSwaps));
-                        SpawnText($"+{scoreMod}", new Vector3(280, -130, 0), Color.white, 20f);
+                        SpawnText($"+{scoreMod}", new Vector3(280, -130, 0), Color.white, 20f, GameManager.GameMode.gmSKILL);
                         GameManager.Score += scoreMod;
                     }
-                    numSorted++;
+                    if(numSorted >= LEVELS_IN_A_RUN)
+                    {
+                        isFinished = true;
+                        GameManager.timeScore = Time.timeSinceLevelLoad - timeTrialStartTime;
+                    }
+                    else
+                    {
+                        numSorted++;
+                    }
                     scoreText.text = $"Score: {GameManager.Score}";
                     for(int i = 0; i < tileSpots.Length; i++)
                     {
@@ -204,24 +240,26 @@ public class TileManager : MonoBehaviour
                 {
                     if (swapCount > currentPermutation.bubbleSwaps)
                     {
-                        Color textColor = hintText.color;
-                        textColor.a = 255;
-                        hintText.color = textColor;
+                        hintText.alpha = 255;
                     }
                     gameState = GameState.gsSELECTING;
                 }
                 break;
             case GameState.gsCLEAN_UP:
                 successTimer += Time.deltaTime;
+                if(Input.GetMouseButtonDown(0) && !isFinished)
+                {
+                    successTimer = successPauseTime + 1;
+                }
                 if (successTimer >= successPauseTime) // Wait for a moment before cleaning up and moving to next level
                 {
                     DestroyLevelCreatedInstances();
                     successTimer = 0f;
                     
-
-                    if (numSorted > LEVELS_IN_A_RUN)
+                    if (isFinished)
                     {
-                        Debug.Log("END OF GAME");
+                        // Debug.Log("END OF GAME");
+                        Debug.Log($"Time taken {(Time.timeSinceLevelLoad - timeTrialStartTime)}s");
                         SceneManager.LoadScene("GameEnd");
                     }
                     else
@@ -231,6 +269,7 @@ public class TileManager : MonoBehaviour
                 }
                 break;
         }
+        UpdateTimerText();
     }
 
     void LoadPermutations()
@@ -266,7 +305,7 @@ public class TileManager : MonoBehaviour
             levelMetadata.right_title = cols[3];
             levelMetadatas.Add(levelMetadata);
             line = fp.ReadLine();
-            Debug.Log($"{levelMetadata.level} - {levelMetadata.main_title} - {levelMetadata.left_title} - {levelMetadata.right_title}");            
+            // Debug.Log($"{levelMetadata.level} - {levelMetadata.main_title} - {levelMetadata.left_title} - {levelMetadata.right_title}");            
         }
     }
 
@@ -274,7 +313,7 @@ public class TileManager : MonoBehaviour
     {
         roundText.text = $"ROUND {numSorted} OF {LEVELS_IN_A_RUN}";
         currentPermutation = orderPermutations[rnd.Next(orderPermutations.Count)];
-        Debug.Log($"level permutation picked: {currentPermutation.order[0]},{currentPermutation.order[1]},{currentPermutation.order[2]},{currentPermutation.order[3]},{currentPermutation.order[4]},{currentPermutation.order[5]},{currentPermutation.order[6]} - {currentPermutation.minSwaps} - {currentPermutation.bubbleSwaps}");
+        // Debug.Log($"level permutation picked: {currentPermutation.order[0]},{currentPermutation.order[1]},{currentPermutation.order[2]},{currentPermutation.order[3]},{currentPermutation.order[4]},{currentPermutation.order[5]},{currentPermutation.order[6]} - {currentPermutation.minSwaps} - {currentPermutation.bubbleSwaps}");
         levelMinSwaps = currentPermutation.minSwaps;
         levelBubbleSwaps = currentPermutation.bubbleSwaps;
 
@@ -309,7 +348,9 @@ public class TileManager : MonoBehaviour
             RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
             if(hit.transform == null) // Didn't click anything
             {
-                // ClearTileSelection(); Decide if to keep this or not based on play testing
+                // Debug.Log(mousePos.y);
+                if(mousePos.y > 1.4f || mousePos.y < -1.4f)
+                    ClearTileSelection();
             }
             else if(hit.transform.name.StartsWith(tilePrefab.name))
             {
@@ -332,6 +373,10 @@ public class TileManager : MonoBehaviour
                     tileSelectBoarders[1] = Instantiate(tileSelectBoarderPrefab, swapTiles[1].transform.position, Quaternion.identity);
                     doSwap = true;
                 }
+            }
+            if(gameState == GameState.gsHINT) // If this click has happened while in the hint state, we want to finish our hint time
+            {
+                hintTimer = hintShowTime + 1f; // add 1 to make sure we are over the threshold
             }
         }
     }
@@ -391,9 +436,7 @@ public class TileManager : MonoBehaviour
 
     void DestroyLevelCreatedInstances()
     {
-        Color textColor = hintText.color;
-        textColor.a = 0;
-        hintText.color = textColor;
+        hintText.alpha = 0;
 
         for (int i = 0; i < tiles.Length; i++)
             if(tiles[i] != null)
@@ -404,9 +447,11 @@ public class TileManager : MonoBehaviour
                 Destroy(tileValidityBoarders[i]);
     }
 
-    void SpawnText(string text, Vector3 position, Color color, float size)
+    void SpawnText(string text, Vector3 position, Color color, float size, GameManager.GameMode forGameMode)
     {
-        Debug.Log($"Trying to make it say {text}");
+        // Debug.Log($"Trying to make it say {text}");
+        if(forGameMode != gameMode && forGameMode != GameManager.GameMode.gmALL)
+            return;
         GameObject textObject = Instantiate(textPrefab, parentCanvas.transform);
         TextMeshProUGUI tmpComponent = textObject.GetComponent<TextMeshProUGUI>();
         textObject.transform.localPosition = position;
@@ -426,5 +471,19 @@ public class TileManager : MonoBehaviour
                 tmpComponent.fontSize = size;
             }
         }
+    }
+
+    void UpdateTimerText()
+    {
+        if(isFinished)
+            return;
+
+        float elapsedSeconds = Time.timeSinceLevelLoad - timeTrialStartTime;
+        int minutes = Mathf.FloorToInt(elapsedSeconds / 60f);
+        float seconds = elapsedSeconds - (minutes * 60f);
+        if(minutes == 0)
+            timerText.text = string.Format($"{seconds:F2}");
+        else
+            timerText.text = string.Format($"{minutes}{seconds,5:00.00}");
     }
 }

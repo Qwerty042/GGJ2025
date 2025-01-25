@@ -9,6 +9,7 @@ public class TitleScreenButtons : MonoBehaviour
     public SpriteRenderer spriteRenderer;
     public AudioSource audio;
     public Color hoverColor;
+    public GameManager.GameMode gameMode;
     private Color originalColor;
 
 
@@ -29,7 +30,6 @@ public class TitleScreenButtons : MonoBehaviour
         }
         // Change color to the hover color when mouse enters
         spriteRenderer.color = hoverColor;
-
     }
 
     public void OnMouseExit()
@@ -40,7 +40,7 @@ public class TitleScreenButtons : MonoBehaviour
 
     public void OnMouseDown()
     {
+        GameManager.gameMode = gameMode;
         SceneManager.LoadScene("SampleScene");
     }
-
 }
