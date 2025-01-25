@@ -25,6 +25,7 @@ public class TileManager : MonoBehaviour
     public GameObject tilePrefab;
     public GameObject tileSelectBoarderPrefab;
     public GameObject tileValidityBoarderPrefab;
+    public GameObject tileInvalidBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
     // public Sprite sp;
     public AudioSource sfxSelect;
@@ -91,6 +92,8 @@ public class TileManager : MonoBehaviour
     private OrderPermutation currentPermutation;
     private int swapCount;
     private int numSorted = 1;
+    private float hintTimer = 0f;
+    private float hintShowTime = 2f;
 
     void Start()
     {
@@ -126,17 +129,34 @@ public class TileManager : MonoBehaviour
                     tileDestinations[1] = swapTiles[0].transform.position;
                     gameState = GameState.gsSWAPPING;
                 }
-                if (swapCount > currentPermutation.bubbleSwaps)
+                if(Input.GetKeyDown(KeyCode.H) && swapCount > currentPermutation.bubbleSwaps)
                 {
-                    Color textColor = hintText.color;
-                    textColor.a = 255;
-                    hintText.color = textColor;
+                    for(int i = 0; i < tiles.Length; i++)
+                    {
+                        TileProperties tileProperties = tiles[i].GetComponent<TileProperties>();
+                        GameObject prefab = tileInvalidBoarderPrefab;
+                        if(tileProperties.index == tileProperties.correctIndex)
+                        {
+                            prefab = tileValidityBoarderPrefab;
+                        }
+                        tileValidityBoarders[i] = Instantiate(prefab, tiles[i].transform.position, Quaternion.identity);
+                    }
+                    hintTimer = 0f;
+                    GameManager.Score -= 500;
+                    SpawnText("-500", new Vector3(280, -130, 0), Color.red, 20f);
+                    scoreText.text = $"Score: {GameManager.Score}";
+                    gameState = GameState.gsHINT;
                 }
-                else
+                break;
+            case GameState.gsHINT:
+                hintTimer += Time.deltaTime;
+                if(hintTimer >= hintShowTime)
                 {
-                    Color textColor = hintText.color;
-                    textColor.a = 0;
-                    hintText.color = textColor;
+                    for(int i = 0; i < tileValidityBoarders.Length; i++)
+                    {
+                        Destroy(tileValidityBoarders[i]);
+                    }
+                    gameState= GameState.gsSELECTING;
                 }
                 break;
             case GameState.gsSWAPPING:
@@ -182,6 +202,12 @@ public class TileManager : MonoBehaviour
                 }
                 else
                 {
+                    if (swapCount > currentPermutation.bubbleSwaps)
+                    {
+                        Color textColor = hintText.color;
+                        textColor.a = 255;
+                        hintText.color = textColor;
+                    }
                     gameState = GameState.gsSELECTING;
                 }
                 break;
@@ -365,7 +391,11 @@ public class TileManager : MonoBehaviour
 
     void DestroyLevelCreatedInstances()
     {
-        for(int i = 0; i < tiles.Length; i++)
+        Color textColor = hintText.color;
+        textColor.a = 0;
+        hintText.color = textColor;
+
+        for (int i = 0; i < tiles.Length; i++)
             if(tiles[i] != null)
                 Destroy(tiles[i]);
 

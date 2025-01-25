@@ -40,7 +40,7 @@ public class TitleScreenButtons : MonoBehaviour
 
     public void OnMouseDown()
     {
-
+        SceneManager.LoadScene("SampleScene");
     }
 
 }
