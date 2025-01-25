@@ -1,18 +1,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using Microsoft.Unity.VisualStudio.Editor;
 using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.Tilemaps;
-using UnityEngine.UIElements;
 
 public class TileManager : MonoBehaviour
 {
     public GameObject tilePrefab;
     public GameObject tileSelectBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
+    // public Sprite sp;
 
     private enum GameState
     {
@@ -20,7 +19,7 @@ public class TileManager : MonoBehaviour
         gsSWAPPING
     }
 
-    // private struct Tile
+    // private struct Tile //TODO: move to this struct?
     // {
     //     GameObject tileObject;
     //     int goalIndex;
@@ -40,20 +39,21 @@ public class TileManager : MonoBehaviour
     private float swapTimer = 0f;
     // private const int NUM_PERMUTATIONS = 5018;
 
-    void Awake()
-    {
+    void Start()
+    {        
         NUM_TILES = tileSpots.Length;
-
+        Sprite sp0 = Resources.Load<Sprite>("Levels/0-0");
+        Sprite sp1 = Resources.Load<Sprite>("Levels/0-1");
+        Sprite sp2 = Resources.Load<Sprite>("Levels/0-2");
         tiles = new GameObject[NUM_TILES];
         for (int i = 0; i < NUM_TILES; i++)
         {
             tiles[i] = Instantiate(tilePrefab, tileSpots[i], Quaternion.identity);
         }
-    }
-
-    void Start()
-    {
         Debug.Log("Hello World!");
+        tiles[0].GetComponent<SpriteRenderer>().sprite = sp0;
+        tiles[1].GetComponent<SpriteRenderer>().sprite = sp1;
+        tiles[2].GetComponent<SpriteRenderer>().sprite = sp2;
     }
 
     void Update()
@@ -100,7 +100,6 @@ public class TileManager : MonoBehaviour
                 {
                     swapTiles[0] = hit.transform.gameObject;
                     tileSelectBoarders[0] = Instantiate(tileSelectBoarderPrefab, swapTiles[0].transform.position, Quaternion.identity);
-                    Debug.LogFormat("Selected Tile! Name:{0} ID:{1}", swapTiles[0].name, swapTiles[0].GetInstanceID().ToString());
                 }
                 else if (swapTiles[0].GetInstanceID() == hit.transform.gameObject.GetInstanceID()) // Tile is already selected, deselect:
                 {
@@ -110,10 +109,6 @@ public class TileManager : MonoBehaviour
                 {
                     swapTiles[1] = hit.transform.gameObject;
                     tileSelectBoarders[1] = Instantiate(tileSelectBoarderPrefab, swapTiles[1].transform.position, Quaternion.identity);
-                    Debug.LogFormat("Swap Name_0:{0},ID_0:{1} with Name_1:{2},ID_1:{3}", swapTiles[0].name, 
-                                                                                         swapTiles[0].GetInstanceID().ToString(),
-                                                                                         swapTiles[1].name,
-                                                                                         swapTiles[1].GetInstanceID().ToString());
                     doSwap = true;
                 }
             }
@@ -122,7 +117,6 @@ public class TileManager : MonoBehaviour
 
     void ClearTileSelection()
     {
-        Debug.Log("Clear selected");
         swapTiles = new GameObject[2] {null, null};
         Destroy(tileSelectBoarders[0]);
         Destroy(tileSelectBoarders[1]);
@@ -139,12 +133,12 @@ public class TileManager : MonoBehaviour
 
         if(animationProgress > 1f)
         {
-            Debug.Log("Done swap animation");
             swapTimer = 0;
             doSwap = false;
         }
     }
 
+    //TODO: make the tiles spin as they fly
     void SwapMoveStepSine(float progressFraction, int tileIndex)
     {
         Vector3 nextPos = swapTiles[tileIndex].transform.position;
@@ -154,10 +148,7 @@ public class TileManager : MonoBehaviour
 
         nextPos.x = Mathf.Lerp(startX, tileDestinations[tileIndex].x, progressFraction);
         nextPos.y = direction * SWAP_AMPLITUDE * Mathf.Sin(((startX * Mathf.PI)/(xDist))-((nextPos.x * Mathf.PI)/(xDist)));
-        if(tileIndex == 0)
-        {
-            Debug.LogFormat("X:{0},Y:{1}", nextPos.x, nextPos.y);
-        }
+
         swapTiles[tileIndex].transform.position = nextPos;
     }
 }
