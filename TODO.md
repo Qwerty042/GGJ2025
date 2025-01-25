@@ -1,9 +1,11 @@
-- Scoring for strategy mode
-- Fix level text locations and size
-- Adjust tile sizes/spacing
-- Soreboard
+- ~~Scoring for strategy mode~~
+- ~~Fix level text locations and size~~
+- ~~Adjust tile sizes/spacing~~
 - Second game mode
-- bubble sort sound? bubble sort visuals on the main menu page? or music when you "win"?
+- In-game music
+- WebGL
+- misc asthetic improvements (esp in-game background)
+- Soreboard/High Score
 - Add keyboard bindings
 - spin items as they move to next position
-- hints
+- bubble sort sound? bubble sort visuals on the main menu page? or music when you "win"?
