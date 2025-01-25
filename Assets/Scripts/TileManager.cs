@@ -12,6 +12,7 @@ public class TileManager : MonoBehaviour
     public GameObject tileSelectBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
     // public Sprite sp;
+    public AudioSource sfx;
 
     private enum GameState
     {
@@ -100,6 +101,7 @@ public class TileManager : MonoBehaviour
                 {
                     swapTiles[0] = hit.transform.gameObject;
                     tileSelectBoarders[0] = Instantiate(tileSelectBoarderPrefab, swapTiles[0].transform.position, Quaternion.identity);
+                    sfx.Play();
                 }
                 else if (swapTiles[0].GetInstanceID() == hit.transform.gameObject.GetInstanceID()) // Tile is already selected, deselect:
                 {
