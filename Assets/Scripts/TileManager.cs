@@ -6,7 +6,19 @@ using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+
+public static class GameManager
+{
+    public static int Score;
+
+    public enum GameMode
+    {
+        gmSKILL,
+        gmSPEED
+    }
+}
 
 public class TileManager : MonoBehaviour
 {
@@ -17,11 +29,15 @@ public class TileManager : MonoBehaviour
     // public Sprite sp;
     public AudioSource sfxSelect;
     public AudioSource sfxSwap;
+    public AudioSource sfxVictory;
+    public AudioSource sfxDefeat;
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI leftText;
     public TextMeshProUGUI rightText;
     public TextMeshProUGUI swapCountText;
     public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI roundText;
+    public TextMeshProUGUI hintText;
     public GameObject textPrefab;
     public Canvas parentCanvas;
 
@@ -32,7 +48,8 @@ public class TileManager : MonoBehaviour
         gsSELECTING,
         gsSWAPPING,
         gsCHECK_ORDER,
-        gsCLEAN_UP
+        gsCLEAN_UP,
+        gsHINT
     }
 
     private struct OrderPermutation
@@ -50,8 +67,9 @@ public class TileManager : MonoBehaviour
         public string right_title;
     }
 
-    private GameState gameState = GameState.gsPRE_START;
+    private GameState gameState = GameState.gsLOAD_LEVEL;
     public const int TOTAL_LEVELS = 47;
+    public const int LEVELS_IN_A_RUN = 8;
     private int nextLevel;
     private int levelBubbleSwaps = 99;
     private int levelMinSwaps = 99;
@@ -72,14 +90,11 @@ public class TileManager : MonoBehaviour
     private List<int> doneLevelList = new List<int>();
     private OrderPermutation currentPermutation;
     private int swapCount;
-    private int score = 0;
+    private int numSorted = 1;
 
     void Start()
     {
-        for (int i = 0; i < tileSpots.Length; i++)
-        {
-            tiles[i] = Instantiate(tileSelectBoarderPrefab, tileSpots[i], Quaternion.identity);
-        }
+        GameManager.Score = 0;
 
         LoadPermutations();
         LoadLevelMetadata();
@@ -89,16 +104,6 @@ public class TileManager : MonoBehaviour
     {
         switch (gameState)
         {
-            case GameState.gsPRE_START:
-                if(Input.GetKeyDown(KeyCode.Space))
-                {
-                    for (int i = 0; i < tileSpots.Length; i++)
-                    {
-                        Destroy(tiles[i]);
-                    }
-                    gameState = GameState.gsLOAD_LEVEL;
-                }
-                break;
             case GameState.gsLOAD_LEVEL:
                 nextLevel = rnd.Next(TOTAL_LEVELS);
                 while (doneLevelList.Contains(nextLevel))
@@ -108,8 +113,6 @@ public class TileManager : MonoBehaviour
                 Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);
                 doneLevelList.Add(nextLevel);
-
-                nextLevel++;
                 gameState = GameState.gsSELECTING;
                 break;
             case GameState.gsSELECTING:
@@ -122,6 +125,18 @@ public class TileManager : MonoBehaviour
                     tileDestinations[0] = swapTiles[1].transform.position;
                     tileDestinations[1] = swapTiles[0].transform.position;
                     gameState = GameState.gsSWAPPING;
+                }
+                if (swapCount > currentPermutation.bubbleSwaps)
+                {
+                    Color textColor = hintText.color;
+                    textColor.a = 255;
+                    hintText.color = textColor;
+                }
+                else
+                {
+                    Color textColor = hintText.color;
+                    textColor.a = 0;
+                    hintText.color = textColor;
                 }
                 break;
             case GameState.gsSWAPPING:
@@ -138,18 +153,27 @@ public class TileManager : MonoBehaviour
                     if (swapCount == currentPermutation.minSwaps)
                     {
                         // PERFECT!
-                        SpawnText("PERFECT!", new Vector3(0, 0, 0));
-                        score += 1000;
+                        SpawnText("PERFECT!", new Vector3(0, 0, 0), Color.white, 60f);
+                        SpawnText("+1000", new Vector3(280, -130, 0), Color.white, 20f);
+                        sfxVictory.Play();
+                        GameManager.Score += 1000;
                     }
                     else if (swapCount > currentPermutation.bubbleSwaps)
                     {
                         // FAILURE!
+                        SpawnText("BUBBLE SORT WAS BETTER!", new Vector3(0, 0, 0), Color.red, 50f);
+                        sfxDefeat.Play();
                     }
                     else
                     {
-                        score += 1000 - (1000 * (swapCount - currentPermutation.minSwaps) / (currentPermutation.bubbleSwaps + 1 - currentPermutation.minSwaps));
+                        sfxVictory.Play();
+                        SpawnText("NICE!", new Vector3(0, 0, 0), Color.white, 60f);
+                        int scoreMod = 1000 - (1000 * (swapCount - currentPermutation.minSwaps) / (currentPermutation.bubbleSwaps + 1 - currentPermutation.minSwaps));
+                        SpawnText($"+{scoreMod}", new Vector3(280, -130, 0), Color.white, 20f);
+                        GameManager.Score += scoreMod;
                     }
-                    scoreText.text = $"Score: {score}";
+                    numSorted++;
+                    scoreText.text = $"Score: {GameManager.Score}";
                     for(int i = 0; i < tileSpots.Length; i++)
                     {
                         tileValidityBoarders[i] = Instantiate(tileValidityBoarderPrefab, tileSpots[i], Quaternion.identity);
@@ -167,7 +191,17 @@ public class TileManager : MonoBehaviour
                 {
                     DestroyLevelCreatedInstances();
                     successTimer = 0f;
-                    gameState = GameState.gsLOAD_LEVEL;
+                    
+
+                    if (numSorted > LEVELS_IN_A_RUN)
+                    {
+                        Debug.Log("END OF GAME");
+                        SceneManager.LoadScene("GameEnd");
+                    }
+                    else
+                    {
+                        gameState = GameState.gsLOAD_LEVEL;
+                    }
                 }
                 break;
         }
@@ -212,6 +246,7 @@ public class TileManager : MonoBehaviour
 
     void LoadLevel(int level)
     {
+        roundText.text = $"ROUND {numSorted} OF {LEVELS_IN_A_RUN}";
         currentPermutation = orderPermutations[rnd.Next(orderPermutations.Count)];
         Debug.Log($"level permutation picked: {currentPermutation.order[0]},{currentPermutation.order[1]},{currentPermutation.order[2]},{currentPermutation.order[3]},{currentPermutation.order[4]},{currentPermutation.order[5]},{currentPermutation.order[6]} - {currentPermutation.minSwaps} - {currentPermutation.bubbleSwaps}");
         levelMinSwaps = currentPermutation.minSwaps;
@@ -339,7 +374,7 @@ public class TileManager : MonoBehaviour
                 Destroy(tileValidityBoarders[i]);
     }
 
-    void SpawnText(string text, Vector3 position)
+    void SpawnText(string text, Vector3 position, Color color, float size)
     {
         Debug.Log($"Trying to make it say {text}");
         GameObject textObject = Instantiate(textPrefab, parentCanvas.transform);
@@ -348,6 +383,8 @@ public class TileManager : MonoBehaviour
         if (tmpComponent != null)
         {
             tmpComponent.text = text;
+            tmpComponent.color = color;
+            tmpComponent.fontSize = size;
         }
         else
         {
@@ -355,6 +392,8 @@ public class TileManager : MonoBehaviour
             if (tmpWorldComponent != null)
             {
                 tmpWorldComponent.text = text;
+                tmpWorldComponent.color = color;
+                tmpComponent.fontSize = size;
             }
         }
     }
