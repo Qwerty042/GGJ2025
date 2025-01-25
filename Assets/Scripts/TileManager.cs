@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
@@ -14,7 +15,13 @@ public class TileManager : MonoBehaviour
     public GameObject tileValidityBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
     // public Sprite sp;
-    public AudioSource sfx;
+    public AudioSource sfxSelect;
+    public AudioSource sfxSwap;
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI leftText;
+    public TextMeshProUGUI rightText;
+    public TextMeshProUGUI swapCountText;
+    public TextMeshProUGUI scoreText;
 
     private enum GameState
     {
@@ -42,8 +49,8 @@ public class TileManager : MonoBehaviour
     }
 
     private GameState gameState = GameState.gsPRE_START;
-
-    private int nextLevel = 0;
+    public const int TOTAL_LEVELS = 47;
+    private int nextLevel;
     private int levelBubbleSwaps = 99;
     private int levelMinSwaps = 99;
     private List<OrderPermutation> orderPermutations = new List<OrderPermutation>();
@@ -60,6 +67,10 @@ public class TileManager : MonoBehaviour
     private float successTimer = 0f;
     private float successPauseTime = 2f;
     static System.Random rnd = new System.Random();
+    private List<int> doneLevelList = new List<int>();
+    private OrderPermutation currentPermutation;
+    private int swapCount;
+    private int score = 0;
 
     void Start()
     {
@@ -87,8 +98,15 @@ public class TileManager : MonoBehaviour
                 }
                 break;
             case GameState.gsLOAD_LEVEL:
+                nextLevel = rnd.Next(TOTAL_LEVELS);
+                while (doneLevelList.Contains(nextLevel))
+                {
+                    nextLevel = rnd.Next(TOTAL_LEVELS);
+                }
                 Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);
+                doneLevelList.Add(nextLevel);
+
                 nextLevel++;
                 gameState = GameState.gsSELECTING;
                 break;
@@ -113,8 +131,22 @@ public class TileManager : MonoBehaviour
                 }
                 break;
             case GameState.gsCHECK_ORDER:
-                if(ValidateOrder())
+                if (ValidateOrder())
                 {
+                    if (swapCount == currentPermutation.minSwaps)
+                    {
+                        // PERFECT!
+                        score += 1000;
+                    }
+                    else if (swapCount > currentPermutation.bubbleSwaps)
+                    {
+                        // FAILURE!
+                    }
+                    else
+                    {
+                        score += 1000 - (1000 * (swapCount - currentPermutation.minSwaps) / (currentPermutation.bubbleSwaps + 1 - currentPermutation.minSwaps));
+                    }
+                    scoreText.text = $"Score: {score}";
                     for(int i = 0; i < tileSpots.Length; i++)
                     {
                         tileValidityBoarders[i] = Instantiate(tileValidityBoarderPrefab, tileSpots[i], Quaternion.identity);
@@ -177,20 +209,28 @@ public class TileManager : MonoBehaviour
 
     void LoadLevel(int level)
     {
-        OrderPermutation permutation = orderPermutations[rnd.Next(orderPermutations.Count)];
-        Debug.Log($"level permutation picked: {permutation.order[0]},{permutation.order[1]},{permutation.order[2]},{permutation.order[3]},{permutation.order[4]},{permutation.order[5]},{permutation.order[6]} - {permutation.minSwaps} - {permutation.bubbleSwaps}");
-        levelMinSwaps = permutation.minSwaps;
-        levelBubbleSwaps = permutation.bubbleSwaps;
+        currentPermutation = orderPermutations[rnd.Next(orderPermutations.Count)];
+        Debug.Log($"level permutation picked: {currentPermutation.order[0]},{currentPermutation.order[1]},{currentPermutation.order[2]},{currentPermutation.order[3]},{currentPermutation.order[4]},{currentPermutation.order[5]},{currentPermutation.order[6]} - {currentPermutation.minSwaps} - {currentPermutation.bubbleSwaps}");
+        levelMinSwaps = currentPermutation.minSwaps;
+        levelBubbleSwaps = currentPermutation.bubbleSwaps;
 
         for (int i = 0; i < tileSpots.Length; i++)
         {
             tiles[i] = Instantiate(tilePrefab, tileSpots[i], Quaternion.identity);
-            Sprite sp = Resources.Load<Sprite>($"Levels/{level}-{permutation.order[i]}");
+            Sprite sp = Resources.Load<Sprite>($"Levels/{level}-{currentPermutation.order[i]}");
             tiles[i].GetComponent<SpriteRenderer>().sprite = sp;
             TileProperties tileProps = tiles[i].GetComponent<TileProperties>();
             tileProps.index = i;
-            tileProps.correctIndex = permutation.order[i];
+            tileProps.correctIndex = currentPermutation.order[i];
         }
+
+        titleText.text = levelMetadatas[nextLevel].main_title;
+        leftText.text = levelMetadatas[nextLevel].left_title;
+        rightText.text = levelMetadatas[nextLevel].right_title;
+        swapCount = 0;
+        swapCountText.text = $"You: 0\nBubble Sort: {currentPermutation.bubbleSwaps}\nOptimum: {currentPermutation.minSwaps}";
+
+
     }
 
     void CheckSwapping()
@@ -211,6 +251,7 @@ public class TileManager : MonoBehaviour
             {
                 if(swapTiles[0] == null) // No other tile selected
                 {
+                    sfxSelect.Play();
                     swapTiles[0] = hit.transform.gameObject;
                     tileSelectBoarders[0] = Instantiate(tileSelectBoarderPrefab, swapTiles[0].transform.position, Quaternion.identity);
                 }
@@ -220,6 +261,9 @@ public class TileManager : MonoBehaviour
                 }
                 else
                 {
+                    sfxSwap.Play();
+                    swapCount++;
+                    swapCountText.text = $"You: {swapCount}\nBubble Sort: {currentPermutation.bubbleSwaps}\nOptimum: {currentPermutation.minSwaps}";
                     swapTiles[1] = hit.transform.gameObject;
                     tileSelectBoarders[1] = Instantiate(tileSelectBoarderPrefab, swapTiles[1].transform.position, Quaternion.identity);
                     doSwap = true;
