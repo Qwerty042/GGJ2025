@@ -2,16 +2,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Microsoft.Unity.VisualStudio.Editor;
 using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.AI;
+using UnityEngine.Tilemaps;
 
 public class TileManager : MonoBehaviour
 {
     public GameObject tilePrefab;
     public GameObject tileSelectBoarderPrefab;
+    public GameObject tileValidityBoarderPrefab;
     public Vector3[] tileSpots;// = new Vector3[7];
     // public Sprite sp;
     public AudioSource sfx;
@@ -22,7 +22,8 @@ public class TileManager : MonoBehaviour
         gsLOAD_LEVEL,
         gsSELECTING,
         gsSWAPPING,
-        gsCHECK_ORDER
+        gsCHECK_ORDER,
+        gsCLEAN_UP
     }
 
     private struct OrderPermutation
@@ -43,16 +44,22 @@ public class TileManager : MonoBehaviour
     private GameState gameState = GameState.gsPRE_START;
 
     private int nextLevel = 0;
+    private int levelBubbleSwaps = 99;
+    private int levelMinSwaps = 99;
     private List<OrderPermutation> orderPermutations = new List<OrderPermutation>();
     private List<LevelMetadata> levelMetadatas = new List<LevelMetadata>();
     private GameObject[] tiles = new GameObject[7];
     private GameObject[] tileSelectBoarders = new GameObject[2] {null, null};
+    private GameObject[] tileValidityBoarders = new GameObject[7];
     private GameObject[] swapTiles = new GameObject[2] {null, null};
     private Vector3[] tileDestinations = new Vector3[2];
     private bool doSwap = false;
     private const float SWAP_MOVE_TIME = 0.25f;
     private const float SWAP_AMPLITUDE = 2f;
     private float swapTimer = 0f;
+    private float successTimer = 0f;
+    private float successPauseTime = 2f;
+    static System.Random rnd = new System.Random();
 
     void Start()
     {
@@ -63,16 +70,6 @@ public class TileManager : MonoBehaviour
 
         LoadPermutations();
         LoadLevelMetadata();
-
-        // Sprite sp0 = Resources.Load<Sprite>("Levels/0-0");
-        // Sprite sp1 = Resources.Load<Sprite>("Levels/0-1");
-        // Sprite sp2 = Resources.Load<Sprite>("Levels/0-2");
-
-        // Debug.Log("Hello World!");
-        // tiles[0].GetComponent<SpriteRenderer>().sprite = sp0;
-        // tiles[0].GetComponent<TileProperties>().correctIndex = 6;
-        // tiles[1].GetComponent<SpriteRenderer>().sprite = sp1;
-        // tiles[2].GetComponent<SpriteRenderer>().sprite = sp2;
     }
 
     void Update()
@@ -82,17 +79,26 @@ public class TileManager : MonoBehaviour
             case GameState.gsPRE_START:
                 if(Input.GetKeyDown(KeyCode.Space))
                 {
+                    for (int i = 0; i < tileSpots.Length; i++)
+                    {
+                        Destroy(tiles[i]);
+                    }
                     gameState = GameState.gsLOAD_LEVEL;
                 }
                 break;
             case GameState.gsLOAD_LEVEL:
+                Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);
                 nextLevel++;
+                gameState = GameState.gsSELECTING;
                 break;
             case GameState.gsSELECTING:
                 CheckSwapping();
                 if(doSwap)
                 {
+                    int firstIndex = swapTiles[0].GetComponent<TileProperties>().index;
+                    swapTiles[0].GetComponent<TileProperties>().index = swapTiles[1].GetComponent<TileProperties>().index;
+                    swapTiles[1].GetComponent<TileProperties>().index = firstIndex;
                     tileDestinations[0] = swapTiles[1].transform.position;
                     tileDestinations[1] = swapTiles[0].transform.position;
                     gameState = GameState.gsSWAPPING;
@@ -104,6 +110,29 @@ public class TileManager : MonoBehaviour
                 {
                     ClearTileSelection();
                     gameState = GameState.gsCHECK_ORDER;
+                }
+                break;
+            case GameState.gsCHECK_ORDER:
+                if(ValidateOrder())
+                {
+                    for(int i = 0; i < tileSpots.Length; i++)
+                    {
+                        tileValidityBoarders[i] = Instantiate(tileValidityBoarderPrefab, tileSpots[i], Quaternion.identity);
+                    }
+                    gameState = GameState.gsCLEAN_UP;
+                }
+                else
+                {
+                    gameState = GameState.gsSELECTING;
+                }
+                break;
+            case GameState.gsCLEAN_UP:
+                successTimer += Time.deltaTime;
+                if (successTimer >= successPauseTime) // Wait for a moment before cleaning up and moving to next level
+                {
+                    DestroyLevelCreatedInstances();
+                    successTimer = 0f;
+                    gameState = GameState.gsLOAD_LEVEL;
                 }
                 break;
         }
@@ -148,7 +177,20 @@ public class TileManager : MonoBehaviour
 
     void LoadLevel(int level)
     {
-        
+        OrderPermutation permutation = orderPermutations[rnd.Next(orderPermutations.Count)];
+        Debug.Log($"level permutation picked: {permutation.order[0]},{permutation.order[1]},{permutation.order[2]},{permutation.order[3]},{permutation.order[4]},{permutation.order[5]},{permutation.order[6]} - {permutation.minSwaps} - {permutation.bubbleSwaps}");
+        levelMinSwaps = permutation.minSwaps;
+        levelBubbleSwaps = permutation.bubbleSwaps;
+
+        for (int i = 0; i < tileSpots.Length; i++)
+        {
+            tiles[i] = Instantiate(tilePrefab, tileSpots[i], Quaternion.identity);
+            Sprite sp = Resources.Load<Sprite>($"Levels/{level}-{permutation.order[i]}");
+            tiles[i].GetComponent<SpriteRenderer>().sprite = sp;
+            TileProperties tileProps = tiles[i].GetComponent<TileProperties>();
+            tileProps.index = i;
+            tileProps.correctIndex = permutation.order[i];
+        }
     }
 
     void CheckSwapping()
@@ -209,6 +251,7 @@ public class TileManager : MonoBehaviour
         }
     }
 
+
     //TODO: make the tiles spin as they fly
     void SwapMoveStepSine(float progressFraction, int tileIndex)
     {
@@ -221,5 +264,31 @@ public class TileManager : MonoBehaviour
         nextPos.y = direction * SWAP_AMPLITUDE * Mathf.Sin(((startX * Mathf.PI)/(xDist))-((nextPos.x * Mathf.PI)/(xDist)));
 
         swapTiles[tileIndex].transform.position = nextPos;
+    }
+
+
+    bool ValidateOrder()
+    {
+        for(int i = 0; i < tiles.Length - 1; i++) // Don't need to check the last one because if all the others are correct, the last one has to be correct
+        {
+            TileProperties tileProps = tiles[i].GetComponent<TileProperties>();
+            if(tileProps.index != tileProps.correctIndex)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+    void DestroyLevelCreatedInstances()
+    {
+        for(int i = 0; i < tiles.Length; i++)
+            if(tiles[i] != null)
+                Destroy(tiles[i]);
+
+        for(int i = 0; i < tileSpots.Length; i++)
+            if(tileValidityBoarders[i] != null)
+                Destroy(tileValidityBoarders[i]);
     }
 }
