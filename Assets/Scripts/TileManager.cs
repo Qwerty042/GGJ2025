@@ -22,6 +22,8 @@ public class TileManager : MonoBehaviour
     public TextMeshProUGUI rightText;
     public TextMeshProUGUI swapCountText;
     public TextMeshProUGUI scoreText;
+    public GameObject textPrefab;
+    public Canvas parentCanvas;
 
     private enum GameState
     {
@@ -136,6 +138,7 @@ public class TileManager : MonoBehaviour
                     if (swapCount == currentPermutation.minSwaps)
                     {
                         // PERFECT!
+                        SpawnText("PERFECT!", new Vector3(0, 0, 0));
                         score += 1000;
                     }
                     else if (swapCount > currentPermutation.bubbleSwaps)
@@ -334,5 +337,25 @@ public class TileManager : MonoBehaviour
         for(int i = 0; i < tileSpots.Length; i++)
             if(tileValidityBoarders[i] != null)
                 Destroy(tileValidityBoarders[i]);
+    }
+
+    void SpawnText(string text, Vector3 position)
+    {
+        Debug.Log($"Trying to make it say {text}");
+        GameObject textObject = Instantiate(textPrefab, parentCanvas.transform);
+        TextMeshProUGUI tmpComponent = textObject.GetComponent<TextMeshProUGUI>();
+        textObject.transform.localPosition = position;
+        if (tmpComponent != null)
+        {
+            tmpComponent.text = text;
+        }
+        else
+        {
+            TextMeshPro tmpWorldComponent = textObject.GetComponent<TextMeshPro>();
+            if (tmpWorldComponent != null)
+            {
+                tmpWorldComponent.text = text;
+            }
+        }
     }
 }
