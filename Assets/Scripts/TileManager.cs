@@ -73,7 +73,7 @@ public class TileManager : MonoBehaviour
     }
 
     private GameState gameState = GameState.gsPRE_START;
-    public const int TOTAL_LEVELS = 47;
+    public const int TOTAL_LEVELS = 58;
     public const int LEVELS_IN_A_RUN = 8;
     private int nextLevel;
     private int levelBubbleSwaps = 99;
