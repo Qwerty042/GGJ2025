@@ -1,0 +1,9 @@
+- Scoring for strategy mode
+- Fix level text locations and size
+- Adjust tile sizes/spacing
+- Soreboard
+- Second game mode
+- bubble sort sound? bubble sort visuals on the main menu page? or music when you "win"?
+- Add keyboard bindings
+- spin items as they move to next position
+- hints
