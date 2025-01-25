@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5917829774652704121}
   - component: {fileID: 5157481055970843085}
   - component: {fileID: 852542735069875869}
+  - component: {fileID: 5056824440866649984}
   m_Layer: 0
   m_Name: SortableTile
   m_TagString: Untagged
@@ -130,3 +131,17 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 4, y: 4}
   m_EdgeRadius: 0
+--- !u!114 &5056824440866649984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3446365212598504960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9bdb6c1515fcf24aa27fde7e27f3f5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 0
+  correctIndex: 0
