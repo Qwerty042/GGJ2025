@@ -28,7 +28,7 @@ public class script : MonoBehaviour
         else if(GameManager.gameMode == GameManager.GameMode.gmSPEED)
         {
             speedEnd.Play();
-            float existingBestTime = PlayerPrefs.GetFloat("BestTime", 0f);
+            float existingBestTime = PlayerPrefs.GetFloat("BestTime", 99999f);
             if(GameManager.timeScore < existingBestTime)
             {
                 PlayerPrefs.SetFloat("BestTime", GameManager.timeScore);

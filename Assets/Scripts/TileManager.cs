@@ -372,18 +372,20 @@ public class TileManager : MonoBehaviour
 
     void LoadPermutations()
     {
-        StreamReader fp = new StreamReader("Assets/Resources/Levels/all_permutations.csv");
-        fp.ReadLine(); // Ignore first line which has the column titles
-        string line = fp.ReadLine();
-        while (line != null)
+        TextAsset csvFile = Resources.Load<TextAsset>("Levels/all_permutations");
+        string[] lines = csvFile.text.Split('\n');
+
+        for (int i = 1; i < lines.Length; i++)
         {
+            string line = lines[i].Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
             OrderPermutation permutation = new OrderPermutation();
             string[] cols = line.Split(';');
             permutation.order = Array.ConvertAll(cols[0].Split(','), int.Parse);
             permutation.minSwaps = int.Parse(cols[1]);
             permutation.bubbleSwaps = int.Parse(cols[2]);
             orderPermutations.Add(permutation);
-            line = fp.ReadLine();
         }
         // OrderPermutation permutation1 = orderPermutations[3000];
         // Debug.Log($"{permutation1.order[0]},{permutation1.order[1]},{permutation1.order[2]},{permutation1.order[3]},{permutation1.order[4]},{permutation1.order[5]},{permutation1.order[6]} - {permutation1.minSwaps} - {permutation1.bubbleSwaps}");
@@ -391,10 +393,28 @@ public class TileManager : MonoBehaviour
 
     void LoadLevelMetadata()
     {
-        StreamReader fp = new StreamReader("Assets/Resources/Levels/levels.csv");
-        string line = fp.ReadLine();
-        while (line != null)
+        // Load the CSV file as a TextAsset using Resources
+        TextAsset csvFile = Resources.Load<TextAsset>("Levels/levels");
+        if (csvFile == null)
         {
+            Debug.LogError("Failed to load levels.csv from Resources/Levels!");
+            return;
+        }
+
+        // Read the file line by line
+        string[] lines = csvFile.text.Split('\n');
+        if (lines.Length <= 0)
+        {
+            Debug.LogError("levels.csv is empty!");
+            return;
+        }
+
+        // Read each line (no need to skip headers if they are absent)
+        foreach (string rawLine in lines)
+        {
+            string line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
             LevelMetadata levelMetadata = new LevelMetadata();
             string[] cols = line.Split(',');
             levelMetadata.level = int.Parse(cols[0]);
@@ -402,8 +422,9 @@ public class TileManager : MonoBehaviour
             levelMetadata.left_title = cols[2];
             levelMetadata.right_title = cols[3];
             levelMetadatas.Add(levelMetadata);
-            line = fp.ReadLine();
-            // Debug.Log($"{levelMetadata.level} - {levelMetadata.main_title} - {levelMetadata.left_title} - {levelMetadata.right_title}");            
+
+            // Optional: Debug log
+            // Debug.Log($"{levelMetadata.level} - {levelMetadata.main_title} - {levelMetadata.left_title} - {levelMetadata.right_title}");
         }
     }
 
