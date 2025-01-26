@@ -103,12 +103,21 @@ public class TileManager : MonoBehaviour
     private float timeTrialStartTime = -1f;
     private float prestartCountdownTimer = 5.5f;
     private float prestartTimerNextDigit = 5f;
+    private string audioState = "NOT READY";
+    private AudioSource speedBase;
+    private AudioSource speedExtra;
+    private AudioSource skillBase;
+    private AudioSource skillExtra;
+    public AudioClip speedBaseClip;
+    public AudioClip speedExtraClip;
+    public AudioClip skillBaseClip;
+    public AudioClip skillExtraClip;
 
     void Start()
     {
         GameManager.Score = 0;
         gameMode = GameManager.gameMode;
-        if(gameMode == GameManager.GameMode.gmSPEED)
+        if (gameMode == GameManager.GameMode.gmSPEED)
         {
             scoreText.alpha = 0;
             swapCountText.alpha = 0;
@@ -124,10 +133,72 @@ public class TileManager : MonoBehaviour
         rightText.alpha = 0;
         LoadPermutations();
         LoadLevelMetadata();
+
+        speedBase = gameObject.AddComponent<AudioSource>();
+        speedBase.clip = speedBaseClip;
+        speedBase.loop = true;
+        speedBase.volume = 1f;
+
+        speedExtra = gameObject.AddComponent<AudioSource>();
+        speedExtra.clip = speedExtraClip;
+        speedExtra.loop = true;
+        speedExtra.volume = 0f;
+
+        skillBase = gameObject.AddComponent<AudioSource>();
+        skillBase.clip = skillBaseClip;
+        skillBase.loop = true;
+        skillBase.volume = 1f;
+
+        skillExtra = gameObject.AddComponent<AudioSource>();
+        skillExtra.clip = skillExtraClip;
+        skillExtra.loop = true;
+        skillExtra.volume = 0f;
+
+        if (gameMode == GameManager.GameMode.gmSPEED)
+        {
+            speedBase.Play();
+            speedExtra.Play();
+        }
+        else if (gameMode == GameManager.GameMode.gmSKILL)
+        {
+            skillBase.Play();
+            skillExtra.Play();
+        }
     }
 
     void Update()
     {
+        //Debug.Log($"{speedBaseClip.loadState},{speedExtraClip.loadState},{skillBaseClip.loadState},{skillExtraClip.loadState}");
+        //if (audioState == "NOT READY")
+        //{
+        //    bool allTracksReady = true;
+        //    if (speedBaseClip.loadState != AudioDataLoadState.Loaded)
+        //        allTracksReady = false;
+        //    if (speedExtraClip.loadState != AudioDataLoadState.Loaded)
+        //        allTracksReady = false;
+        //    if (skillBaseClip.loadState != AudioDataLoadState.Loaded)
+        //        allTracksReady = false;
+        //    if (skillExtraClip.loadState != AudioDataLoadState.Loaded)
+        //        allTracksReady = false;
+        //    if (allTracksReady)
+        //        audioState = "READY";
+        //}
+        //else if ((gameMode == GameManager.GameMode.gmSPEED) && (audioState == "READY"))
+        //{
+        //    Debug.Log("Playing...");
+        //    speedBase.Play();
+        //    speedExtra.Play();
+        //    audioState = "DONE";
+        //}
+        //else if ((gameMode == GameManager.GameMode.gmSKILL) && (audioState == "READY"))
+        //{
+        //    Debug.Log("Playing...");
+        //    skillBase.Play();
+        //    skillExtra.Play();
+        //    audioState = "DONE";
+        //}
+
+
         switch (gameState)
         {
             case GameState.gsPRE_START:
@@ -152,6 +223,11 @@ public class TileManager : MonoBehaviour
                 while (doneLevelList.Contains(nextLevel))
                 {
                     nextLevel = rnd.Next(TOTAL_LEVELS);
+                }
+                if (numSorted > 4)
+                {
+                    speedExtra.volume = 1f;
+                    skillExtra.volume = 1f;
                 }
                 // Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);

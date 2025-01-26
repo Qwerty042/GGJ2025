@@ -7,12 +7,15 @@ using UnityEngine.SceneManagement;
 public class script : MonoBehaviour
 {
     public TextMeshProUGUI finalScoreText;
+    public AudioSource skillEnd;
+    public AudioSource speedEnd;
 
     // Start is called before the first frame update
     void Start()
     {
         if(GameManager.gameMode == GameManager.GameMode.gmSKILL)
         {
+            skillEnd.Play();
             int existingHighScore = PlayerPrefs.GetInt("HighScore", 0);
             if (GameManager.Score > existingHighScore)
             {
@@ -24,6 +27,7 @@ public class script : MonoBehaviour
         }
         else if(GameManager.gameMode == GameManager.GameMode.gmSPEED)
         {
+            speedEnd.Play();
             float existingBestTime = PlayerPrefs.GetFloat("BestTime", 0f);
             if(GameManager.timeScore < existingBestTime)
             {
