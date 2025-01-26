@@ -740,6 +740,10 @@ MonoBehaviour:
   timerText: {fileID: 1417708802}
   textPrefab: {fileID: 2802910031457617973, guid: 8f53bc0540f5c534188635b4654deea2, type: 3}
   parentCanvas: {fileID: 564140767}
+  speedBaseClip: {fileID: 8300000, guid: 2cf851341f854cd468c66c7fb6e795b6, type: 3}
+  speedExtraClip: {fileID: 8300000, guid: 7c15155287aa5364eadfd229d8425090, type: 3}
+  skillBaseClip: {fileID: 8300000, guid: 666e21e8cd091f240b587e4a09f2dba9, type: 3}
+  skillExtraClip: {fileID: 8300000, guid: 672eeba5467a2ca4f9fcbd6925d799bc, type: 3}
 --- !u!1 &834673303
 GameObject:
   m_ObjectHideFlags: 0
