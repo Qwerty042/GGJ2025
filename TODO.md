@@ -1,7 +1,7 @@
 - ~~Scoring for strategy mode~~
 - ~~Fix level text locations and size~~
 - ~~Adjust tile sizes/spacing~~
-- Second game mode
+- ~~Second game mode~~
 - In-game music
 - WebGL
 - misc asthetic improvements (esp in-game background)
