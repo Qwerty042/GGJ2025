@@ -96,11 +96,13 @@ public class TileManager : MonoBehaviour
     private OrderPermutation currentPermutation;
     private int swapCount;
     private int numSorted = 1;
-    private bool isFinished = false;
+    private bool isFinished = true;
     private float hintTimer = 0f;
     private float hintShowTime = 2f;
     private GameManager.GameMode gameMode;
     private float timeTrialStartTime = -1f;
+    private float prestartCountdownTimer = 5.5f;
+    private float prestartTimerNextDigit = 5f;
 
     void Start()
     {
@@ -114,7 +116,12 @@ public class TileManager : MonoBehaviour
         else if (gameMode == GameManager.GameMode.gmSKILL)
         {
             timerText.alpha = 0;
+            prestartCountdownTimer = 0f;
         }
+
+        titleText.alpha = 0;
+        leftText.alpha = 0;
+        rightText.alpha = 0;
         LoadPermutations();
         LoadLevelMetadata();
     }
@@ -124,9 +131,21 @@ public class TileManager : MonoBehaviour
         switch (gameState)
         {
             case GameState.gsPRE_START:
-                // TODO: Have a countdown sequence here if they are in time trial mode
-                timeTrialStartTime = Time.timeSinceLevelLoad;
-                gameState = GameState.gsLOAD_LEVEL;
+                prestartCountdownTimer -= Time.deltaTime;
+                if(prestartCountdownTimer <= 0f)
+                {
+                    SpawnText("GO!", new Vector3(0, 100, 0), Color.green, 100f, GameManager.GameMode.gmALL);
+                    sfxSwap.Play();
+                    timeTrialStartTime = Time.timeSinceLevelLoad;
+                    isFinished = false;
+                    gameState = GameState.gsLOAD_LEVEL;
+                }
+                else if(prestartCountdownTimer <= prestartTimerNextDigit)
+                {
+                    sfxSelect.Play();
+                    SpawnText($"{prestartTimerNextDigit:F0}", new Vector3(0, 100, 0), Color.black, 100f, GameManager.GameMode.gmSPEED);
+                    prestartTimerNextDigit -= 1f;
+                }
                 break;
             case GameState.gsLOAD_LEVEL:
                 nextLevel = rnd.Next(TOTAL_LEVELS);
@@ -137,6 +156,9 @@ public class TileManager : MonoBehaviour
                 // Debug.Log($"Loading level {nextLevel}...");
                 LoadLevel(nextLevel);
                 doneLevelList.Add(nextLevel);
+                titleText.alpha = 255;
+                leftText.alpha = 255;
+                rightText.alpha = 255;
                 gameState = GameState.gsSELECTING;
                 break;
             case GameState.gsSELECTING:
@@ -484,6 +506,6 @@ public class TileManager : MonoBehaviour
         if(minutes == 0)
             timerText.text = string.Format($"{seconds:F2}");
         else
-            timerText.text = string.Format($"{minutes}{seconds,5:00.00}");
+            timerText.text = string.Format($"{minutes}:{seconds,5:00.00}");
     }
 }

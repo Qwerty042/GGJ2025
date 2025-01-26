@@ -2,10 +2,11 @@
 - ~~Fix level text locations and size~~
 - ~~Adjust tile sizes/spacing~~
 - ~~Second game mode~~
-- In-game music
+- ~~Soreboard/High Score~~
+- ~~In-game music~~
+- Countdown start for time trial
 - WebGL
-- misc asthetic improvements (esp in-game background)
-- Soreboard/High Score
-- Add keyboard bindings
 - spin items as they move to next position
+- misc asthetic improvements (esp in-game background)
+- Add keyboard bindings
 - bubble sort sound? bubble sort visuals on the main menu page? or music when you "win"?
